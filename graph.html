@@ -417,6 +417,64 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 		node.attr("cx", function(d) { return d.x; })
 			.attr("cy", function(d) { return d.y; });
 	  });
+	  
+
+		/***
+		* V : Vacciné
+		* NV : Non Vacciné
+		* IV : Invaccinable
+		* I : Infecté
+		***/
+
+		var start,
+			frontier;
+			
+		function initPropagation(){
+			start = getRandomInt(0, randgraph.nodes.length);
+			frontier = [start]
+		}
+		  
+		function propagation(){
+			while(checkPropagation()){
+				var neighbors = []
+				frontier.forEach(function(e){
+					neighbors.concat(findNeighbors(e));
+				})
+				
+				var newFrontier =[]
+				for (var n = 0; n < graph.nodes.length; n++) {
+					if(graph.nodes[n].status != "V" && graph.nodes[n].status != "I"){
+						newFrontier.append(n)
+						graph.nodes[n].status = "I"
+					}
+				})
+				frontier = newFrontier
+			}
+		}  
+
+		function findNeighbors(t) {
+			for (var e = [], n = 0; n < graph.links.length; n++) {
+				var r = graph.links[n];
+				r.source == t && e.push(r.target), r.target == t && e.push(r.source)
+			}
+			return e
+		}
+
+		function getRandomInt(min, max) {
+		  return Math.floor(Math.random() * (max - min)) + min;
+		}
+
+		function checkPropagation(){
+			var res = false;
+			graph.nodes.every(function(element, index, array) {
+				if (element.status == "NV" || element.status == "IV") { 
+					res = true;
+					return false;
+				}
+				return true;
+			});
+			return res;
+		}
 }]);
 
 </script>
