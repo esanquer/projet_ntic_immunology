@@ -26,7 +26,8 @@
 		</div>
 		<input type="range" ng-model="parameters.percentVaccinated" max="{{100-parameters.percentNonVaccinable}}" min="0" step="1">{{parameters.percentVaccinated}}
 		<input type="range" ng-model="parameters.percentNonVaccinable" max="{{100-parameters.percentVaccinated}}" min="0" step="1">{{parameters.percentNonVaccinable}}
-		<button ng-click="initialiserGraphe()">RegenererGraphe</button>
+		<button ng-click="reinitialiserGraphe()">RegenererGraphe</button>
+		<button ng-click="changerNoeud8()">changer noeud 8</button>
 	</div>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
@@ -36,19 +37,19 @@ var ImmunoApp = angular.module('ImmunoApp',{});
 ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {	
 	$scope.parameters={};
 	$scope.parameters.propagation = 15;
-	$scope.parameters.percentVaccinated = 10;
-	$scope.parameters.percentNonVaccinable = 10;
+	$scope.parameters.percentVaccinated = 0;
+	$scope.parameters.percentNonVaccinable = 0;
 	$scope.width = 960,
 	$scope.height = 500;
 	$scope.graph = {
 		  "nodes":[],
 		  "links":[]
 		}
-
+	
 	$scope.regenererGraphe = function(){
 		$scope.graph.nodes = [];
 		$scope.graph.links = [];
-
+		$scope.id = 0;
 		$scope.graph.nodes.push($scope.initialiserNoeud("Myriel",1,$scope.generateStatus()));
 		$scope.graph.nodes.push($scope.initialiserNoeud("Napoleon",1,$scope.generateStatus()));
 		$scope.graph.nodes.push($scope.initialiserNoeud("Mlle.Baptistine",1,$scope.generateStatus()));
@@ -385,7 +386,54 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 	}
 	
 	$scope.initialiserNoeud = function(name,group,status){
-		return {"name":name,"group":group,"status":$scope.generateStatus()};
+		return {"name":name,"group":group,"status":$scope.generateStatus(), "id":$scope.id++};
+	}
+	
+	$scope.changerNoeud8 = function(){
+		var data = {"status": "V"};
+		$scope.updateNode(8,data);
+	}
+	$scope.updateNodeById = function(id,newInfos){
+		var i = 0;
+		var found = false;
+		while(!found && i < $scope.graph.nodes.length){
+			if($scope.graph.nodes[i].id == id){
+				found = true;
+			}
+			else{
+				i++;
+			}
+		}
+		if(found){
+			if("name" in newInfos){	
+				$scope.graph.nodes[i].name = newInfos.name;
+			}
+			if("status" in newInfos){	
+				$scope.graph.nodes[i].status = newInfos.status;
+			}
+			return $scope.graph.nodes[i];	
+		}
+		else{
+			return false;
+		}
+	}
+	$scope.updateNode = function(id,data){
+		var node = $scope.updateNodeById(id,data);
+		if(node!=false){
+			console.log(node);
+			console.log("recherche node "+$scope.idcss(id));
+			var circle = $scope.svg.select($scope.idcss(id)); 
+			console.log(circle);
+			circle
+			.transition()
+			.duration(2)
+			.style("fill", $scope.fillNode(node));
+		}
+		else{
+			console.log("node " +id+ "not found in the graph :");
+			console.log($scope.graph.nodes);
+		}
+		
 	}
 	$scope.generateStatus = function(){
 		var rnd = Math.random();
@@ -397,6 +445,29 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 		status = "IV";
 		}
 		return status;
+	}
+	
+	$scope.idhtml = function(id){
+		return "circle-"+id;	
+	}
+	
+	$scope.idcss = function(id){
+		return "#"+$scope.idhtml(id);
+	}
+	
+	
+	$scope.fillNode = function(node){
+		var color;
+		if(node.status=="V"){
+		color = d3.rgb(0,255,0);
+		}
+		else if(node.status=="IV"){
+		color = d3.rgb(0,0,0);
+		}
+		else if(node.status=="NV"){
+		color = d3.rgb(64,64,255);
+		}
+		return  color;
 	}
 	/*var graph = {
 	  "nodes":[
@@ -737,8 +808,9 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 	};
 	*/
 	$scope.initialiserGraphe = function(){
+		
 		var color = d3.scale.category20();
-
+		
 		$scope.force = d3.layout.force()
 			.charge(-120)
 			.linkDistance(50)
@@ -749,7 +821,7 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 		$scope.svg = d3.select("#graph").append("svg")
 			.attr("width", $scope.width)
 			.attr("height", $scope.height);
-			$scope.regenererGraphe();
+			
 		
 		console.log($scope.graph);
 			$scope.force
@@ -768,36 +840,35 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 		  .data($scope.graph.nodes)
 		.enter().append("circle")
 		  .attr("class", "node")
-		  .attr("r", 5)
-		  .style("fill", function(d) { 
-			  var color;
-			  if(d.status=="V"){
-				color = d3.rgb(0,255,0);
-			  }
-			  else if(d.status=="IV"){
-				color = d3.rgb(0,0,0);
-			  }
-			  else if(d.status=="NV"){
-				color = d3.rgb(64,64,255);
-			  }
-			  return  color;
-		  })
+		  .attr("id",function(d){
+				return $scope.idhtml(d.id);
+			})
+		  .attr("r", 6)
+		  .style("fill", $scope.fillNode)
 		  .call($scope.force.drag);
 
 		$scope.node.append("title")
 		  .text(function(d) { return d.name; });
 
 		$scope.force.on("tick", function() {
-		$scope.link.attr("x1", function(d) { return d.source.x; })
+			$scope.link.attr("x1", function(d) { return d.source.x; })
 			.attr("y1", function(d) { return d.source.y; })
 			.attr("x2", function(d) { return d.target.x; })
 			.attr("y2", function(d) { return d.target.y; });
 
-		$scope.node.attr("cx", function(d) { return d.x; })
+			$scope.node.attr("cx", function(d) { return d.x; })
 			.attr("cy", function(d) { return d.y; });
 		});
-	  };
-	 $scope.initialiserGraphe();
+	};
+	
+	$scope.reinitialiserGraphe = function(){
+		$scope.regenererGraphe();
+		for(var i = 0 ; i < $scope.graph.nodes.length ; i++){
+			$scope.updateNode($scope.graph.nodes[i].id,{});
+		}
+	}
+	$scope.regenererGraphe();
+	$scope.initialiserGraphe();
 }]);
 	  
 
