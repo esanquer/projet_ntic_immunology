@@ -27,6 +27,7 @@
 		<input type="range" ng-model="parameters.percentVaccinated" max="{{100-parameters.percentNonVaccinable}}" min="0" step="1">{{parameters.percentVaccinated}}
 		<input type="range" ng-model="parameters.percentNonVaccinable" max="{{100-parameters.percentVaccinated}}" min="0" step="1">{{parameters.percentNonVaccinable}}
 		<button ng-click="initialiserGraphe()">RegenererGraphe</button>
+		<button ng-click="lancerPropagation()">Lancer Propagation</button>
 	</div>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
@@ -797,7 +798,69 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 			.attr("cy", function(d) { return d.y; });
 		});
 	  };
-	 $scope.initialiserGraphe();
+
+	$scope.lancerPropagation = function(){
+		$scope.initPropagation();
+		$scope.propagation();
+	};
+
+	$scope.frontier;
+	
+	$scope.initPropagation = function(){
+		$scope.frontier = [$scope.getRandomInt(0, $scope.graph.nodes.length)];
+		console.debug($scope.frontier);
+	};  
+
+	$scope.propagation = function(){
+		var cpt = 0
+		var _continue = true;
+		while(_continue){
+			_continue = false;
+			console.debug("[CPT]",cpt++);
+			var neighbors = [];
+			$scope.frontier.forEach(function(e){
+				Array.prototype.push.apply(neighbors, $scope.findNeighbors(e));
+			});
+
+			var newFrontier =[];
+			neighbors.forEach(function(e){
+				if($scope.graph.nodes[e].status != "V" && $scope.graph.nodes[e].status != "I"){
+					newFrontier.push(e);
+					$scope.graph.nodes[e].status = "I";
+					_continue = true;
+				} 
+			})
+			$scope.frontier = newFrontier;
+			console.debug($scope.frontier);
+		}
+	};
+
+	$scope.findNeighbors = function(t) {
+		for (var e = [], n = 0; n < $scope.graph.links.length; n++) {
+			var r = $scope.graph.links[n];
+			r.source.index == t && e.push(r.target.index), r.target.index == t && e.push(r.source.index);
+		}
+		return e
+	};
+
+	$scope.getRandomInt = function(min, max) {
+	  return Math.floor(Math.random() * (max - min)) + min;
+	};
+
+	$scope.checkPropagation = function(){
+		var res = false;
+		$scope.graph.nodes.every(function(element, index, array) {
+			console.debug("[STAT]",element.status);
+			if (element.status == "NV" || element.status == "IV") { 
+				res = true;
+				return false;
+			}
+			return true;
+		});
+		return res;
+	};
+	
+	$scope.initialiserGraphe();
 }]);
 	  
 
@@ -808,13 +871,7 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 * I : Infecté
 ***/
 
-var start,
-	frontier;
-	
-function initPropagation(){
-	start = getRandomInt(0, randgraph.nodes.length);
-	frontier = [start]
-}
+
   
 function propagation(){
 	while(checkPropagation()){
@@ -834,29 +891,7 @@ function propagation(){
 	}
 }  
 
-function findNeighbors(t) {
-	for (var e = [], n = 0; n < graph.links.length; n++) {
-		var r = graph.links[n];
-		r.source == t && e.push(r.target), r.target == t && e.push(r.source)
-	}
-	return e
-}
 
-function getRandomInt(min, max) {
-  return Math.floor(Math.random() * (max - min)) + min;
-}
-
-function checkPropagation(){
-	var res = false;
-	graph.nodes.every(function(element, index, array) {
-		if (element.status == "NV" || element.status == "IV") { 
-			res = true;
-			return false;
-		}
-		return true;
-	});
-	return res;
-}
 
 
 </script>
