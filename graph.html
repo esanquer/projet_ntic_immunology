@@ -24,9 +24,9 @@
 	<div ng-app="ImmunoApp" ng-controller="immunoAppController" name="manager">
 		<div id="graph">
 		</div>
-		<input type="range" ng-model="parameters.percentVaccinated" max="{{100-parameters.percentNonVaccinable}}" min="0" step="1">{{parameters.percentVaccinated}}
-		<input type="range" ng-model="parameters.percentNonVaccinable" max="{{100-parameters.percentVaccinated}}" min="0" step="1">{{parameters.percentNonVaccinable}}
-		<button ng-click="reinitialiserGraphe()">RegenererGraphe</button>
+		<input type="range" ng-mouseup="reinitialiserGraphe()"ng-model="parameters.percentVaccinated" max="{{100-parameters.percentNonVaccinable}}" min="0" step="1">{{parameters.percentVaccinated}}
+		<input type="range" ng-mouseup="reinitialiserGraphe()" ng-model="parameters.percentNonVaccinable" max="{{100-parameters.percentVaccinated}}" min="0" step="1">{{parameters.percentNonVaccinable}}
+		<button ng-click="">RegenererGraphe</button>
 		<button ng-click="changerNoeud8()">changer noeud 8</button>
 	</div>
 <script src="http://d3js.org/d3.v3.min.js"></script>
