@@ -24,6 +24,10 @@
 	<div ng-app="ImmunoApp" ng-controller="immunoAppController" name="manager">
 		<div id="graph">
 		</div>
+		<div ng-show="selectSickNodeMode">
+			<p>{{appMessage}}</p>
+			<button ng-click="propager()">Ok</button>
+		</div>
 		<input type="range" ng-mouseup="reinitialiserGraphe()"ng-model="parameters.percentVaccinated" max="{{100-parameters.percentNonVaccinable}}" min="0" step="1">{{parameters.percentVaccinated}}
 		<input type="range" ng-mouseup="reinitialiserGraphe()" ng-model="parameters.percentNonVaccinable" max="{{100-parameters.percentVaccinated}}" min="0" step="1">{{parameters.percentNonVaccinable}}
 		<button ng-click="">RegenererGraphe</button>
@@ -37,6 +41,8 @@ var ImmunoApp = angular.module('ImmunoApp',{});
 
 ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {	
 	$scope.parameters={};
+	$scope.frontier=[];
+	$scope.selectSickNodeMode = false;
 	$scope.parameters.propagation = 15;
 	$scope.parameters.percentVaccinated = 0;
 	$scope.parameters.percentNonVaccinable = 0;
@@ -465,10 +471,13 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 		color = d3.rgb(0,255,0);
 		}
 		else if(node.status=="IV"){
-		color = d3.rgb(0,0,0);
+		color = d3.rgb(204,204,0);
 		}
 		else if(node.status=="NV"){
 		color = d3.rgb(64,64,255);
+		}
+		else if(node.status=="I"){
+		color = d3.rgb(255,0,0);
 		}
 		return  color;
 	}
@@ -479,7 +488,7 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 		
 		$scope.force = d3.layout.force()
 			.charge(-120)
-			.linkDistance(100)
+			.linkDistance(75)
 			.size([$scope.width, $scope.height]);
 			
 		var svgContainer = document.getElementById('graph');
@@ -511,10 +520,13 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 			})
 		  .attr("r", 6)
 		  .style("fill", $scope.fillNode)
-		  .call($scope.force.drag);
+		  .call($scope.force.drag)
+		  .on("click",function(d){
+		  $scope.nodeCkickEvent(d)}
+		  );
 
 		$scope.node.append("title")
-		  .text(function(d) { return d.name; });
+		.text(function(d) { return d.name; });
 
 		$scope.force.on("tick", function() {
 			$scope.link.attr("x1", function(d) { return d.source.x; })
@@ -525,15 +537,46 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 			$scope.node.attr("cx", function(d) { return d.x; })
 			.attr("cy", function(d) { return d.y; });
 		});
-		$scope.initPropagation();
+		//$scope.initPropagation();
+	};
+	
+	$scope.nodeCkickEvent = function(node){
+		//console.log("click");
+		console.log(node);
+		if($scope.selectSickNodeMode){
+			if (node.status == "NV"){
+				var data = {"status":"I"};
+				$scope.updateNode(node.id,data)
+				$scope.frontier.push(node.id);
+				//console.log($scope.frontier);
+			}
+			else if(node.status == "I"){
+				var data = {"status":"V"};
+				$scope.updateNode(node.id,data)
+				var index = $scope.frontier.indexOf(node.id);
+				$scope.frontier.splice(index,1);
+			}
+			else if (node.status == "V"){
+				var data = {"status":"IV"};
+				$scope.updateNode(node.id,data)
+			}
+			else if (node.status == "IV"){
+				var data = {"status":"NV"};
+				$scope.updateNode(node.id,data)
+			}
+			
+		}
+		//console.log(node);	
 	};
 
 	$scope.lancerPropagation = function(){
+		$scope.selectSickNodeMode = true;
+		$scope.appMessage="Selectionner le ou les premiers infectés";
 		//$scope.initPropagation();
-		$scope.doNextStep();
+		//$scope.doNextStep();
 	};
 
-	$scope.frontier;
+
 	
 	$scope.initPropagation = function(){
 		$scope.frontier = [$scope.getRandomInt(0, $scope.graph.nodes.length)];
@@ -547,10 +590,14 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 		while(_continue){
 			_continue = false;
 			console.debug("[CPT]",cpt++);
-			
-			
 		}
 	};
+	
+	$scope.propager = function(){
+		$scope.selectSickNodeMode = false;
+		setInterval($scope.doNextStep, 2000);
+	};
+	
 	$scope.doNextStep=function(){
 		var noMoreStep = true;
 		var neighbors = [];
@@ -602,11 +649,9 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 	
 	$scope.reinitialiserGraphe = function(){
 		$scope.regenererGraphe();
-		for(var i = 0 ; i < $scope.graph.nodes.length ; i++){
-			$scope.updateNode($scope.graph.nodes[i].id,{});
-		}
+		$scope.initialiserGraphe();
 	};
-
+	
 	$scope.regenererGraphe();
 	$scope.initialiserGraphe();
 }]);
