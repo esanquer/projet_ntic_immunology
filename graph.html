@@ -479,7 +479,7 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 		
 		$scope.force = d3.layout.force()
 			.charge(-120)
-			.linkDistance(50)
+			.linkDistance(100)
 			.size([$scope.width, $scope.height]);
 			
 		var svgContainer = document.getElementById('graph');
@@ -525,17 +525,19 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 			$scope.node.attr("cx", function(d) { return d.x; })
 			.attr("cy", function(d) { return d.y; });
 		});
+		$scope.initPropagation();
 	};
 
 	$scope.lancerPropagation = function(){
-		$scope.initPropagation();
-		$scope.propagation();
+		//$scope.initPropagation();
+		$scope.doNextStep();
 	};
 
 	$scope.frontier;
 	
 	$scope.initPropagation = function(){
 		$scope.frontier = [$scope.getRandomInt(0, $scope.graph.nodes.length)];
+		console.debug("initial frontier");
 		console.debug($scope.frontier);
 	};  
 
@@ -545,7 +547,13 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 		while(_continue){
 			_continue = false;
 			console.debug("[CPT]",cpt++);
-			var neighbors = [];
+			
+			
+		}
+	};
+	$scope.doNextStep=function(){
+		var noMoreStep = true;
+		var neighbors = [];
 			$scope.frontier.forEach(function(e){
 				Array.prototype.push.apply(neighbors, $scope.findNeighbors(e));
 			});
@@ -556,17 +564,19 @@ ImmunoApp.controller('immunoAppController',['$scope', function ($scope) {
 					newFrontier.push(e);
 					//$scope.graph.nodes[e].status = "I";
 					$scope.updateNode(e, {"status":"I"})
-					_continue = true;
+					noMoreStep = true;
+					//sleep(1);
 				} 
 			})
 			$scope.frontier = newFrontier;
+			console.debug("nouveau frontier");
 			console.debug($scope.frontier);
-			sleep(1);
-		}
-	};
+		return noMoreStep;
+	}
 
 	$scope.findNeighbors = function(t) {
-		for (var e = [], n = 0; n < $scope.graph.links.length; n++) {
+		var e = []
+		for (n = 0; n < $scope.graph.links.length; n++) {
 			var r = $scope.graph.links[n];
 			r.source.index == t && e.push(r.target.index), r.target.index == t && e.push(r.source.index);
 		}
